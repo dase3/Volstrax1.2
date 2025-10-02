@@ -287,21 +287,28 @@ class _HeightMapPageState extends State<HeightMapPage> {
   }
 
   void _generateFakeHeightMap() {
+    // Generate a radial heightmap: highest in the center and falling off to edges.
+    // We use a Gaussian (exp(-r^2 / (2*sigma^2))) falloff and add small noise.
     final random = math.Random();
+    final cx = (_gridSize - 1) / 2.0;
+    final cy = (_gridSize - 1) / 2.0;
+    // sigma controls how quickly values fall off from center (in grid cells)
+    final sigma = _gridSize / 4.0;
+
     _heightMap = List.generate(_gridSize, (i) {
       return List.generate(_gridSize, (j) {
-        // Create some interesting patterns
-        double x = i / _gridSize;
-        double y = j / _gridSize;
-        double value =
-            0.5 + 0.3 * math.sin(x * math.pi * 2) * math.cos(y * math.pi * 2);
-        value += 0.2 * random.nextDouble();
-        value +=
-            0.3 *
-            math.exp(-((x - 0.3) * (x - 0.3) + (y - 0.7) * (y - 0.7)) * 10);
-        value +=
-            0.4 *
-            math.exp(-((x - 0.8) * (x - 0.8) + (y - 0.2) * (y - 0.2)) * 8);
+        final dx = i - cx;
+        final dy = j - cy;
+        final r2 = dx * dx + dy * dy;
+
+        // Gaussian radial falloff (center ~1.0, edges -> 0.0)
+        double value = math.exp(-r2 / (2 * sigma * sigma));
+
+        // Optionally boost the center a little and add small noise for realism
+        value =
+            value * 0.9 + 0.1 * math.exp(-r2 / (2 * (sigma / 2) * (sigma / 2)));
+        value += 0.05 * (random.nextDouble() - 0.5);
+
         return value.clamp(0.0, 1.0);
       });
     });
